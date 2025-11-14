@@ -5,7 +5,10 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-deploy:
+  # -----------------------
+  # 1) CI JOB: Build
+  # -----------------------
+  ci:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,10 +25,22 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt || true
 
-    - name: Run tests
-      run: |
-        echo "No tests yet — running flask import check"
-        python -c "import flask"
+
+  # ---------------------------
+  # 2) CD JOB: Deploy to EB (only when CI passes)
+  # ---------------------------
+  cd:
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
 
     - name: Install EB CLI
       run: |
@@ -37,15 +52,10 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-        aws-region: us-east-1
+        aws-region: us-east-1   # Your region
 
     - name: Deploy to Elastic Beanstalk
       run: |
-        # Initialize EB to use your EXISTING application and environment
         eb init "Hello World" --platform "python-3.11" --region us-east-1 --verbose
-
-        # Make sure CLI uses the existing environment and doesn't try to recreate it
         eb use "HelloWorld-env"
-
-        # Deploy
         eb deploy "HelloWorld-env" --staged --verbose
