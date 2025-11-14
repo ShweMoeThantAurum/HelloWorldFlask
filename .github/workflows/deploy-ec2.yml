@@ -3,16 +3,18 @@ name: Deploy to AWS EC2
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # STEP 1 — Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v5
 
+      # STEP 2 — Save SSH Private Key to file
       - name: Save SSH Private Key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -20,41 +22,81 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > keypair.pem
           chmod 600 keypair.pem
 
+      # STEP 3 — Connect and Deploy to EC2
       - name: Deploy to EC2 Instance
         run: |
           EC2_IP=${{ secrets.EC2_IP }}
 
           ssh -o StrictHostKeyChecking=no -i keypair.pem ubuntu@$EC2_IP << 'EOF'
             set -e
-
             echo "Connected to EC2 successfully!"
 
-            # Stop running Flask app safely
+            # -------------------------------
+            # Install required dependencies
+            # -------------------------------
+            sudo apt update -y
+            sudo apt install -y python3-venv python3.12-venv git nginx
+
+            # -------------------------------
+            # Stop existing Flask service (ignore error if first time)
+            # -------------------------------
             sudo systemctl stop flask || true
 
-            # Remove old project
+            # -------------------------------
+            # Remove old application folder
+            # -------------------------------
             rm -rf ~/HelloWorldFlask
 
-            # Clone latest version from GitHub
+            # -------------------------------
+            # Pull latest code
+            # -------------------------------
             git clone https://github.com/ShweMoeThantAurum/HelloWorldFlask.git
             cd HelloWorldFlask
 
-            # Recreate virtual environment
+            # -------------------------------
+            # Create virtual environment
+            # -------------------------------
             python3 -m venv venv
             source venv/bin/activate
+
             pip install --upgrade pip
             pip install -r requirements.txt
 
-            # Restart systemd service
-            sudo systemctl daemon-reload
-            sudo systemctl restart flask
-            sudo systemctl enable flask
+            # -------------------------------
+            # Create Gunicorn systemd service if not exists
+            # -------------------------------
+            if [ ! -f /etc/systemd/system/flask.service ]; then
+              sudo bash -c 'cat > /etc/systemd/system/flask.service << EOF2
+[Unit]
+Description=Gunicorn Flask App
+After=network.target
 
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/HelloWorldFlask
+Environment="PATH=/home/ubuntu/HelloWorldFlask/venv/bin"
+ExecStart=/home/ubuntu/HelloWorldFlask/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 application:app
+
+[Install]
+WantedBy=multi-user.target
+EOF2'
+            fi
+
+            # -------------------------------
+            # Reload systemd and restart service
+            # -------------------------------
+            sudo systemctl daemon-reload
+            sudo systemctl enable flask
+            sudo systemctl restart flask
+
+            # -------------------------------
             # Restart Nginx
+            # -------------------------------
             sudo systemctl restart nginx
 
-            echo "Deployment completed!"
+            echo "Deployment to EC2 completed successfully!"
           EOF
 
-      - name: Clean up SSH Key
+      # STEP 4 — Clean up SSH key
+      - name: Clean up
         run: rm -f keypair.pem
