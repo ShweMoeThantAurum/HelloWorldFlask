@@ -24,36 +24,32 @@ jobs:
         run: |
           EC2_IP=${{ secrets.EC2_IP }}
 
-          ssh -o StrictHostKeyChecking=no -i keypair.pem ubuntu@$EC2_IP << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i keypair.pem ec2-user@$EC2_IP << 'EOF'
             set -e
 
-            echo "Connected to EC2 successfully!"
-
-            # Stop running Flask app safely
+            # --- PREPARE DEPLOYMENT DIRECTORY ---
             sudo systemctl stop flask || true
 
-            # Remove old project
+            # Remove old app
             rm -rf ~/HelloWorldFlask
 
-            # Clone latest version from GitHub
+            # Pull latest repo
             git clone https://github.com/ShweMoeThantAurum/HelloWorldFlask.git
             cd HelloWorldFlask
 
-            # Recreate virtual environment
+            # --- PYTHON ENV SETUP ---
             python3 -m venv venv
             source venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt
 
-            # Restart systemd service
+            # --- RESTART GUNICORN SERVICE ---
             sudo systemctl daemon-reload
             sudo systemctl restart flask
             sudo systemctl enable flask
 
-            # Restart Nginx
+            # --- RESTART NGINX ---
             sudo systemctl restart nginx
-
-            echo "Deployment completed!"
           EOF
 
       - name: Clean up SSH Key
