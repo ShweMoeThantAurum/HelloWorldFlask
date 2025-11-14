@@ -1,0 +1,56 @@
+name: Deploy to AWS EC2
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Save SSH Private Key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "$SSH_PRIVATE_KEY" > keypair.pem
+          chmod 600 keypair.pem
+
+      - name: Deploy to EC2 Instance
+        run: |
+          EC2_IP=${{ secrets.EC2_IP }}
+
+          ssh -o StrictHostKeyChecking=no -i keypair.pem ec2-user@$EC2_IP << 'EOF'
+            set -e
+
+            # --- PREPARE DEPLOYMENT DIRECTORY ---
+            sudo systemctl stop flask || true
+
+            # Remove old app
+            rm -rf ~/HelloWorldFlask
+
+            # Pull latest repo
+            git clone https://github.com/ShweMoeThantAurum/HelloWorldFlask.git
+            cd HelloWorldFlask
+
+            # --- PYTHON ENV SETUP ---
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+            # --- RESTART GUNICORN SERVICE ---
+            sudo systemctl daemon-reload
+            sudo systemctl restart flask
+            sudo systemctl enable flask
+
+            # --- RESTART NGINX ---
+            sudo systemctl restart nginx
+          EOF
+
+      - name: Clean up SSH Key
+        run: rm -f keypair.pem
