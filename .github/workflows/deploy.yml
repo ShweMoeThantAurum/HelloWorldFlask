@@ -1,52 +1,32 @@
-
-name: Deploy (Staged)
+name: Deploy to Elastic Beanstalk
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build-package:
-    name: Build Deployment Package
+  build-and-deploy:
     runs-on: ubuntu-latest
-    outputs:
-      zip_filename: deploy.zip
+    environment: production
+
     steps:
+      # ── Stage 1: Build perfect deployment package ──
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create clean deployment package
+      - name: Build deployment package
         run: |
           mkdir deploy_package
-
           cp application.py requirements.txt Procfile deploy_package/ 2>/dev/null || true
           cp -r .ebextensions deploy_package/ 2>/dev/null || true
 
           cd deploy_package
           zip -r ../deploy.zip . > /dev/null
 
-          echo "=== Final deploy.zip contents ==="
+          echo "=== deploy.zip contents ==="
           unzip -l ../deploy.zip
 
-      - name: Upload zip as artifact (for debugging or second job)
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-package
-          path: deploy.zip
-          retention-days: 1
-
-  deploy-to-eb:
-    name: Deploy to Elastic Beanstalk
-    needs: build-package                 
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - name: Download built package
-        uses: actions/download-artifact@v4
-        with:
-          name: deployment-package
-
+      # ── Stage 2: Deploy (only runs if Stage 1 succeeds) ──
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -67,5 +47,5 @@ jobs:
           region: us-east-1
           deployment_package: deploy.zip
           wait_for_deployment: true
-          wait_for_environment_recovery: 300
+          wait_for_environment_recovery: 600           
           use_existing_version_if_available: true
