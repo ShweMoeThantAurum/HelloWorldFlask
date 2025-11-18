@@ -1,8 +1,8 @@
 name: Deploy to Elastic Beanstalk (2 Stages)
 
-on:
-  push:
-    branches: [ main ]
+# on:
+#   push:
+#     branches: [ main ]
 
 jobs:
   # ──────────────────────────────
@@ -78,4 +78,3 @@ jobs:
           wait_for_deployment: true
           wait_for_environment_recovery: 600
           use_existing_version_if_available: true
-          

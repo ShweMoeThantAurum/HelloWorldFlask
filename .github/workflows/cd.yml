@@ -1,61 +1,61 @@
-# name: Deploy to Elastic Beanstalk
+name: Deploy to Elastic Beanstalk
 
-# on:
-#   push:
-#     branches: [ main ]
+on:
+  push:
+    branches: [ main ]
 
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-#     environment: production
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
 
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-#       - name: Create deployment package (correct way)
-#         run: |
-#           # List files to confirm structure
-#           echo "Files in root before zip:"
-#           ls -la
+      - name: Create deployment package (correct way)
+        run: |
+          # List files to confirm structure
+          echo "Files in root before zip:"
+          ls -la
 
-#           # Create zip with ONLY what EB needs — include hidden files!
-#           zip -r deploy.zip \
-#             application.py \
-#             requirements.txt \
-#             Procfile \
-#             .ebextensions/ \
-#             -x "*.git*" \
-#                "*.github*" \
-#                "venv/*" \
-#                "__pycache__/*" \
-#                "*.pyc" \
-#                "tests/*" \
-#                ".pytest_cache/*" \
-#                "*.log"
+          # Create zip with ONLY what EB needs — include hidden files!
+          zip -r deploy.zip \
+            application.py \
+            requirements.txt \
+            Procfile \
+            .ebextensions/ \
+            -x "*.git*" \
+               "*.github*" \
+               "venv/*" \
+               "__pycache__/*" \
+               "*.pyc" \
+               "tests/*" \
+               ".pytest_cache/*" \
+               "*.log"
 
-#       - name: Configure AWS credentials
-#         uses: aws-actions/configure-aws-credentials@v4
-#         with:
-#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-#           aws-region: us-east-1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
 
-#       - name: Deploy to Elastic Beanstalk
-#         uses: einaregilsson/beanstalk-deploy@v22
-#         with:
-#           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
-#           application_name: HelloWordFlask
-#           environment_name: HelloWordFlask-env
-#           version_label: ${{ github.sha }}
-#           region: us-east-1
-#           deployment_package: deploy.zip
-#           wait_for_deployment: true
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+          application_name: HelloWordFlask
+          environment_name: HelloWordFlask-env
+          version_label: ${{ github.sha }}
+          region: us-east-1
+          deployment_package: deploy.zip
+          wait_for_deployment: true
