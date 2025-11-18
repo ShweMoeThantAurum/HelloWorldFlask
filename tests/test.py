@@ -1,7 +1,13 @@
+import pytest
 from application import app
 
-def test_hello_world():
-    client = app.test_client()
+@pytest.fixture
+def client():
+    app.config['TESTING'] = True
+    with app.test_client() as client:
+        yield client
+
+def test_hello_route(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Hello World" in response.data
+    assert b"Hello, World from Flask and Elasticbeanstalk!" in response.data
