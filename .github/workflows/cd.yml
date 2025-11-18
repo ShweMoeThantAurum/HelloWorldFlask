@@ -15,17 +15,13 @@ jobs:
       - name: Build perfect deployment zip
         run: |
           mkdir deploy_package
-          cp application.py requirements.txt Procfile deploy_package/
 
-          # This one line fixes Amazon Linux 2023 forever
-          cat > deploy_package/application.conf << 'EOF'
-          [app]
-          wsgiapp = application:app
-          EOF
+          cp application.py requirements.txt Procfile deploy_package/
 
           cd deploy_package
           zip -r ../deploy.zip . > /dev/null
-          echo "=== deploy.zip contents ==="
+
+          echo "=== Contents of deploy.zip ==="
           unzip -l ../deploy.zip
 
       - name: Configure AWS credentials
