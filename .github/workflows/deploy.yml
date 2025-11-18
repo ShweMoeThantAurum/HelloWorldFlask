@@ -1,18 +1,25 @@
-name: Deploy to Elastic Beanstalk
+name: Deploy to Elastic Beanstalk (2 Stages)
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build-and-deploy:
+  # ──────────────────────────────
+  # Stage 1: Build deployment package
+  # ──────────────────────────────
+  build-package:
+    name: "Stage 1 – Build Package"
     runs-on: ubuntu-latest
-    environment: production
-
+    outputs:
+      version_label: ${{ steps.set-version.outputs.version }}
     steps:
-      # ── Stage 1: Build perfect deployment package ──
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set version label
+        id: set-version
+        run: echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Build deployment package
         run: |
@@ -23,10 +30,32 @@ jobs:
           cd deploy_package
           zip -r ../deploy.zip . > /dev/null
 
-          echo "=== deploy.zip contents ==="
+          echo "=== Final deploy.zip contents ==="
           unzip -l ../deploy.zip
 
-      # ── Stage 2: Deploy (only runs if Stage 1 succeeds) ──
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: deploy.zip
+          retention-days: 1
+
+
+  # ──────────────────────────────
+  # Stage 2: Deploy to Elastic Beanstalk
+  # ──────────────────────────────
+  deploy-to-eb:
+    name: "Stage 2 – Deploy to EB"
+    needs: build-package                   
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Download built package
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-package
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -43,9 +72,10 @@ jobs:
           aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
           application_name: HelloWordFlask
           environment_name: HelloWordFlask-env
-          version_label: ${{ github.sha }}
+          version_label: ${{ needs.build-package.outputs.version_label }}
           region: us-east-1
           deployment_package: deploy.zip
           wait_for_deployment: true
-          wait_for_environment_recovery: 600           
+          wait_for_environment_recovery: 600
           use_existing_version_if_available: true
+          
