@@ -7,22 +7,37 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build perfect deployment zip
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Create deployment package (correct way)
         run: |
-          mkdir deploy_package
+          # List files to confirm structure
+          echo "Files in root before zip:"
+          ls -la
 
-          cp application.py requirements.txt Procfile deploy_package/
-
-          cd deploy_package
-          zip -r ../deploy.zip . > /dev/null
-
-          echo "=== Contents of deploy.zip ==="
-          unzip -l ../deploy.zip
+          # Create zip with ONLY what EB needs — include hidden files!
+          zip -r deploy.zip \
+            application.py \
+            requirements.txt \
+            Procfile \
+            .ebextensions/ \
+            -x "*.git*" \
+               "*.github*" \
+               "venv/*" \
+               "__pycache__/*" \
+               "*.pyc" \
+               "tests/*" \
+               ".pytest_cache/*" \
+               "*.log"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
