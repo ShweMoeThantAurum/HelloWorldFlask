@@ -6,7 +6,7 @@ A minimal, production-ready Flask “Hello World” application fully automated 
 
 ## Overview
 
-This project demonstrates a **real-world Flask deployment setup** with proper CI/CD automation, version control, and GitHub Actions workflows already configured for you. It follows best practices used in professional software teams.
+This project demonstrates a **real-world Flask deployment setup** with proper CI/CD automation, version control, and GitHub Actions workflows already configured for you.
 
 ---
 
@@ -19,9 +19,6 @@ This project demonstrates a **real-world Flask deployment setup** with proper CI
   - `ci.yml` – linting (flake8) + tests (pytest)
   - `cd.yml` – single-stage deploy (legacy)
   - `deploy.yml` – **two-stage Build → Deploy pipeline**
-- Handles **duplicate version labels** safely
-- **Automatic recovery** from failed deployments
-- Ready for **HTTPS + custom domain**
 
 ---
 
